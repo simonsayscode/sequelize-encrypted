@@ -13,6 +13,7 @@ function EncryptedField(Sequelize, key, opt) {
     self._algorithm = opt.algorithm || 'aes-256-cbc';
     self._iv_length = opt.iv_length || 16;
     self.encrypted_field_name = undefined;
+    self.encrypted_fields = [];
 };
 
 EncryptedField.prototype.vault = function(name) {
@@ -54,6 +55,22 @@ EncryptedField.prototype.vault = function(name) {
     }
 };
 
+EncryptedField.prototype.hash = function(value) {
+    const hash = crypto.createHash('sha256');
+    hash.update(value);
+    return hash.digest('hex');
+}
+
+EncryptedField.prototype.digest = function() {
+    var self = this;
+    return {
+        type: self.Sequelize.STRING,
+        validate: {
+          notEmpty: true,
+        },
+    }
+}
+
 EncryptedField.prototype.field = function(name, config) {
     var self = this;
     config = config || {};
@@ -67,10 +84,14 @@ EncryptedField.prototype.field = function(name, config) {
 
     var encrypted_field_name = self.encrypted_field_name;
 
+    if (~self.encrypted_fields.indexOf(name)) {
+        throw new Error('this field name has already been used: ' + name);
+    }
+    self.encrypted_fields.push(name);
+
     return {
         type: self.Sequelize.VIRTUAL(config.type || null),
         set: function set_encrypted(val) {
-
             if (hasValidations) {
                 this.setDataValue(name, val);
             }
@@ -80,6 +101,11 @@ EncryptedField.prototype.field = function(name, config) {
             var encrypted = this[encrypted_field_name];
             encrypted[name] = val;
             this[encrypted_field_name] = encrypted;
+
+            if (config.digest) {
+                const digest = self.hash(val);
+                this.setDataValue(config.digest, digest);
+            }
         },
         get: function get_encrypted() {
             var encrypted = this[encrypted_field_name];
