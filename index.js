@@ -55,7 +55,7 @@ EncryptedField.prototype.vault = function(name) {
     }
 };
 
-EncryptedField.prototype.hash = function(salt, value) {
+EncryptedField.hash = function(salt, value) {
     const hash = crypto.createHash('sha256');
     hash.update(salt + value);
     return hash.digest('hex');
@@ -103,7 +103,7 @@ EncryptedField.prototype.field = function(name, config) {
             this[encrypted_field_name] = encrypted;
 
             if (config.digest) {
-                const digest = self.hash(self.key, val);
+                const digest = EncryptedField.hash(self.key, val);
                 this.setDataValue(config.digest, digest);
             }
         },
