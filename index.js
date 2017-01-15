@@ -6,6 +6,7 @@ function EncryptedField(Sequelize, key, opt) {
     }
 
     var self = this;
+    self.salt = key;
     self.key = new Buffer(key, 'hex');
     self.Sequelize = Sequelize;
 
@@ -103,7 +104,7 @@ EncryptedField.prototype.field = function(name, config) {
             this[encrypted_field_name] = encrypted;
 
             if (config.digest) {
-                const digest = EncryptedField.hash(self.key, val);
+                const digest = EncryptedField.hash(self.salt, val);
                 this.setDataValue(config.digest, digest);
             }
         },
