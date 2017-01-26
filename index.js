@@ -21,7 +21,7 @@ EncryptedField.prototype.vault = function(name) {
     var self = this;
 
     if (self.encrypted_field_name) {
-        throw new Error('vault already initialized');
+        throw new Error(`Vault '${self.encrypted_field_name}' already initialized!`);
     }
 
     self.encrypted_field_name = name;
@@ -56,28 +56,30 @@ EncryptedField.prototype.vault = function(name) {
     }
 };
 
-EncryptedField.hash = function(salt, value) {
+EncryptedField.hash = function(model, salt, value) {
+    if (!value || value === '') {
+        return null;
+    }
     const hash = crypto.createHash('sha256');
-    hash.update(salt + value);
+    hash.update(model + salt + value);
     return hash.digest('hex');
 }
 
-EncryptedField.prototype.digest = function() {
+EncryptedField.prototype.digest = function(options) {
     var self = this;
-    return {
+    return Object.assign({
         type: self.Sequelize.STRING,
         validate: {
           notEmpty: true,
         },
-    }
+    }, options || {});
 }
 
 EncryptedField.prototype.field = function(name, config) {
     var self = this;
-    config = config || {};
-    config.validate = config.validate || {};
+    config = Object.assign({}, config || {});
 
-    var hasValidations = [undefined,null].indexOf(typeof config.validate) === -1;
+    var hasValidations = !!config.validate;
 
     if (!self.encrypted_field_name) {
         throw new Error('you must initialize the vault field before using encrypted fields');
@@ -93,6 +95,7 @@ EncryptedField.prototype.field = function(name, config) {
     return {
         type: self.Sequelize.VIRTUAL(config.type || null),
         set: function set_encrypted(val) {
+            // trigger the validations
             if (hasValidations) {
                 this.setDataValue(name, val);
             }
@@ -104,17 +107,18 @@ EncryptedField.prototype.field = function(name, config) {
             this[encrypted_field_name] = encrypted;
 
             if (config.digest) {
-                const digest = EncryptedField.hash(self.salt, val);
+                const modelName = this.$modelOptions.name.singular;
+                const digest = EncryptedField.hash(modelName, self.salt, val);
                 this.setDataValue(config.digest, digest);
             }
         },
         get: function get_encrypted() {
             var encrypted = this[encrypted_field_name];
             var val = encrypted[name];
-            return ([undefined, null].indexOf(val) === -1) ? val : config.defaultValue;
+            return (!~[undefined, null].indexOf(val)) ? val : config.defaultValue;
         },
-        allowNull: ([undefined, null].indexOf(config.allowNull) === -1) ? config.allowNull : true,
-        validate: config.validate
+        allowNull: !~[undefined, null].indexOf(config.allowNull) ? config.allowNull : true,
+        validate: config.validate,
     }
 };
 
