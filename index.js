@@ -26,16 +26,17 @@ function EncryptedField(Sequelize, key, opt) {
     self.Sequelize = Sequelize;
 };
 
-EncryptedField.prototype.vault = function(name) {
+EncryptedField.prototype.vault = function(name, opt) {
     var self = this;
 
     if (self.encrypted_field_name) {
         throw new Error('vault already initialized');
     }
 
+    opt = opt || {};
     self.encrypted_field_name = name;
 
-    return {
+    var  vaultDefinition = {
         type: self.Sequelize.BLOB,
         get: function() {
             var previous = this.getDataValue(name);
@@ -75,7 +76,13 @@ EncryptedField.prototype.vault = function(name) {
             var enc_final = Buffer.concat([new_iv, cipher.read()]);
             var previous = this.setDataValue(name, enc_final);
         }
+    };
+
+    if (opt.field) {
+        vaultDefinition.field = opt.field;
     }
+
+    return vaultDefinition;
 };
 
 EncryptedField.prototype.field = function(name, config) {
