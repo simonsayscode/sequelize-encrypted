@@ -1,6 +1,6 @@
 {
   "name": "sequelize-encrypted",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "encrypted sequelize fields",
   "main": "index.js",
   "scripts": {
