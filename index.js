@@ -6,7 +6,7 @@ function EncryptedField(Sequelize, key, opt) {
     }
 
     var self = this;
-
+  
     opt = opt || {};
     self._algorithm = opt.algorithm || 'aes-256-cbc';
     self._iv_length = opt.iv_length || 16;
