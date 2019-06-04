@@ -140,7 +140,7 @@ EncryptedField.prototype.field = function(name, config) {
             this[encrypted_field_name] = encrypted;
 
             if (config.digest) {
-                const modelName = this.$modelOptions.name.singular;
+                const modelName = this._modelOptions.name.singular;
                 const digest = EncryptedField.hash(modelName, self.salt, val);
                 this.setDataValue(config.digest, digest);
             }

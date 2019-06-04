@@ -34,7 +34,7 @@ describe('sequelize-encrypted', () => {
         user.private_1 = 'test';
 
         await user.save();
-        const found = await User.findById(user.id);
+        const found = await User.findByPk(user.id);
         assert.equal(found.private_1, user.private_1);
     });
 
@@ -53,7 +53,7 @@ describe('sequelize-encrypted', () => {
             private_1: vault.field('private_1'),
         });
 
-        const found = await AnotherUser.findById(user.id);
+        const found = await AnotherUser.findByPk(user.id);
         assert.equal(found.private_2, user.private_2);
 
         // encrypted with key1 and different field originally
@@ -76,7 +76,7 @@ describe('sequelize-encrypted', () => {
 
         let threw;
         try {
-            const found = await BadEncryptionUser.findById(model.id)
+            const found = await BadEncryptionUser.findByPk(model.id)
             found.private_1; // trigger decryption
         } catch (error) {
             threw = error;
@@ -114,8 +114,8 @@ describe('sequelize-encrypted', () => {
         ]);
 
         // note: both sets of data accessed via KeyTwoAndOneModel
-        const foundFromKeyOne = await KeyTwoAndOneModel.findById(modelUsingKeyOne.id);
-        const foundFromKeyTwo = await KeyTwoAndOneModel.findById(modelUsingKeyTwo.id);
+        const foundFromKeyOne = await KeyTwoAndOneModel.findByPk(modelUsingKeyOne.id);
+        const foundFromKeyTwo = await KeyTwoAndOneModel.findByPk(modelUsingKeyTwo.id);
 
         assert.equal(foundFromKeyOne.private, modelUsingKeyOne.private);
         assert.equal(foundFromKeyTwo.private, modelUsingKeyTwo.private);
@@ -138,8 +138,7 @@ describe('sequelize-encrypted', () => {
       const user = ValidUser.build();
       user.private_1 = '';
 
-      const res = await user.validate();
-      assert.equal(res.message, 'Validation error: Validation notEmpty failed');
+      assert.throws(user.validate, Error, 'Validation error: Validation notEmpty on private_1 failed');
     });
 
     it('should support defaultValue', async() => {
@@ -169,8 +168,8 @@ describe('sequelize-encrypted', () => {
           })
       });
       const user = ValidUser.build();
-      const res = await user.validate();
-      assert.equal(res.message,'notNull Violation: private_1 cannot be null');
+
+      assert.throws(user.validate, Error, 'notNull Violation: validUser.private_1 cannot be null');
     });
 
     it('should support digest fields', async() => {
@@ -189,7 +188,7 @@ describe('sequelize-encrypted', () => {
       user.private_1 = 'test';
 
       await user.save();
-      const found = await User.findById(user.id);
+      const found = await User.findByPk(user.id);
       assert.equal(found.digest, EncryptedField.hash('user', key2, 'test'));
     });
 
@@ -210,7 +209,7 @@ describe('sequelize-encrypted', () => {
     user.private_1 = 'test';
 
     await user.save();
-    const found = await User.findById(user.id);
+    const found = await User.findByPk(user.id);
     assert.notEqual(found.digest, EncryptedField.hash('user', key1, 'test'));
   });
 });
