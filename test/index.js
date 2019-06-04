@@ -2,7 +2,7 @@ import assert from 'assert';
 import Sequelize from 'sequelize';
 import EncryptedField from '../';
 
-const sequelize = new Sequelize('postgres://postgres@db:5432/postgres');
+const sequelize = new Sequelize('postgres://localhost:5432/postgres');
 
 const key1 = 'a593e7f567d01031d153b5af6d9a25766b95926cff91c6be3438c7f7ac37230e';
 const key2 = 'a593e7f567d01031d153b5af6d9a25766b95926cff91c6be3438c7f7ac37230f';
@@ -16,6 +16,9 @@ describe('sequelize-encrypted', () => {
         name: Sequelize.STRING,
         encrypted: v1.vault('encrypted'),
         another_encrypted: v2.vault('another_encrypted'),
+        encrypted_hash: Sequelize.STRING,
+        // creating digest column for testing
+        digest: v1.digest(),
 
         // encrypted virtual fields
         private_1: v1.field('private_1'),
@@ -169,4 +172,45 @@ describe('sequelize-encrypted', () => {
       const res = await user.validate();
       assert.equal(res.message,'notNull Violation: private_1 cannot be null');
     });
+
+    it('should support digest fields', async() => {
+      const vault = EncryptedField(Sequelize, key2);
+      const User = sequelize.define('user', {
+        name: Sequelize.STRING,
+        encrypted: vault.vault('encrypted'),
+        digest: vault.digest(),
+
+        // encrypted virtual fields
+        private_1: vault.field('private_1', {
+          digest: 'digest'
+        })
+      });
+      const user = User.build();
+      user.private_1 = 'test';
+
+      await user.save();
+      const found = await User.findById(user.id);
+      assert.equal(found.digest, EncryptedField.hash('user', key2, 'test'));
+    });
+
+
+  it('digest fields should only be accessible with the same key as its vault', async() => {
+    const vault = EncryptedField(Sequelize, key2);
+    const User = sequelize.define('user', {
+      name: Sequelize.STRING,
+      encrypted: vault.vault('encrypted'),
+      digest: vault.digest(),
+
+      // encrypted virtual fields
+      private_1: vault.field('private_1', {
+        digest: 'digest'
+      })
+    });
+    const user = User.build();
+    user.private_1 = 'test';
+
+    await user.save();
+    const found = await User.findById(user.id);
+    assert.notEqual(found.digest, EncryptedField.hash('user', key1, 'test'));
+  });
 });
